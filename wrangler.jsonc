@@ -1,0 +1,9 @@
+{
+  "name": "consistency-crew",
+  "compatibility_date": "2026-11-27",
+  "workers_dev": true,
+  "assets": {
+    "directory": "./public",
+    "not_found_handling": "single-page-application"
+  }
+}
