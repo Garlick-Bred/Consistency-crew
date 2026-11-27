@@ -406,7 +406,7 @@ details.how p{color:#b5b5bb;padding-bottom:14px}
 .kp-v{font:italic 800 44px/1 var(--d);letter-spacing:-.01em;min-height:44px;display:flex;align-items:baseline;gap:6px}
 .kp-v small{font:700 15px 'Barlow',sans-serif;font-style:normal;color:#9a9aa2}
 .kp-v.ph{color:#55555c}.kp.light .kp-v.ph{color:#c4c4c0}
-.kp-done{width:52px;height:52px;min-height:52px;padding:0;display:grid;place-items:center;border-radius:999px;border:0;background:#26262b;color:inherit;font:700 15px 'Barlow',sans-serif;cursor:pointer}.kp.light .kp-done{background:#ececea}
+.kp-done{min-height:44px;padding:0 18px;border-radius:999px;border:0;background:#26262b;color:inherit;font:700 15px 'Barlow',sans-serif;cursor:pointer}.kp.light .kp-done{background:#ececea}
 .kp-g{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
 .kp-g button{min-height:56px;border:0;border-radius:14px;background:#232328;color:inherit;font:700 24px var(--d);cursor:pointer;display:grid;place-items:center;transition:background .1s,transform .06s}
 .kp-g button:active{transform:scale(.96);background:#303036}
@@ -1601,7 +1601,6 @@ let KP=null;
 const KPF={w:'Weight',r:'Reps',t:'Seconds',d:'Distance',rpe:'RPE'};
 function kpEl(){let el=$('#kp');if(!el){el=document.createElement('div');el.id='kp';el.className='kp';el.setAttribute('role','dialog');el.setAttribute('aria-label','Number pad');document.body.appendChild(el);
   el.addEventListener('pointerdown',e=>e.preventDefault());
-  let ky=null;el.addEventListener('touchstart',e=>{ky=e.touches[0].clientY},{passive:true});el.addEventListener('touchend',e=>{if(ky!=null&&e.changedTouches[0].clientY-ky>60)kpClose();ky=null},{passive:true});
   el.addEventListener('click',e=>{const b=e.target.closest('[data-k]');if(b&&!b.disabled)kpKey(b.dataset.k)})}return el}
 function kpInput(){return KP&&$(`#live [data-ls="${KP.j},${KP.f}"]`)}
 function kpStep(){const b=LIVE?.blocks[LIVE.idx];return {w:(b?.u==='lb'?(+S.settings.stepLb||5):(+S.settings.stepKg||2.5)),r:1,t:5,d:.1,rpe:.5}[KP.f]||1}
@@ -1610,7 +1609,7 @@ function kpReveal(){const i=kpInput(),sc=$('#live .lv-scroll');if(!i||!sc)return
 function kpClose(){if(!KP)return;KP=null;$$('#live .kp-on').forEach(x=>x.classList.remove('kp-on'));const el=$('#kp');el&&el.classList.remove('on');$('#live')?.classList.remove('kp-open')}
 function kpPaint(){const el=kpEl();el.classList.toggle('light',LTH==='light');$$('#live .kp-on').forEach(x=>x.classList.remove('kp-on'));const inp=kpInput();if(!inp){kpClose();return}inp.classList.add('kp-on');
   const b=LIVE.blocks[LIVE.idx];const u=KP.f==='w'?(b.u||'kg'):KP.f==='t'?'sec':KP.f==='d'?'km':KP.f==='r'?'reps':'';const nxt=kpNext();
-  el.innerHTML=`<div class="kp-h"><div><div class="kp-l">Set ${KP.j+1} · ${KPF[KP.f]||'Value'}</div><div class="kp-v ${KP.v===''?'ph':''}">${esc(KP.v===''?(inp.placeholder&&inp.placeholder!=='—'?inp.placeholder:'0'):KP.v)}${u?`<small>${u}</small>`:''}</div></div><button class="kp-done" data-k="done" aria-label="Hide keypad" title="Hide keypad" type="button"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button></div>
+  el.innerHTML=`<div class="kp-h"><div><div class="kp-l">Set ${KP.j+1} · ${KPF[KP.f]||'Value'}</div><div class="kp-v ${KP.v===''?'ph':''}">${esc(KP.v===''?(inp.placeholder&&inp.placeholder!=='—'?inp.placeholder:'0'):KP.v)}${u?`<small>${u}</small>`:''}</div></div><button class="kp-done" data-k="done" type="button">Done</button></div>
   <div class="kp-g">${['1','2','3','bs','4','5','6','-','7','8','9','+'].map(k=>k==='bs'?`<button data-k="bs" aria-label="Delete" type="button"><svg width="26" height="20" viewBox="0 0 26 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true"><path d="M8 2h15a1.5 1.5 0 0 1 1.5 1.5v13A1.5 1.5 0 0 1 23 18H8l-6.5-8z"/><path d="M12.5 6.5l7 7M19.5 6.5l-7 7"/></svg></button>`:k==='-'||k==='+'?`<button class="kp-s" data-k="${k}" aria-label="${k==='+'?'Increase':'Decrease'}" type="button">${k==='+'?'+':'−'}${String(kpStep())}</button>`:`<button data-k="${k}" type="button">${k}</button>`).join('')}
   <button data-k="." ${KP.dec?'':'disabled'} aria-label="Decimal point" type="button">.</button><button data-k="0" type="button">0</button><button class="kp-n" data-k="next" type="button">${nxt?'Next':'Done'}${nxt?ic('right',18):ic('check',18)}</button></div>`}
 function kpNext(){const ins=$$('#live [data-ls]');const i=ins.indexOf(kpInput());return i>=0&&i<ins.length-1?ins[i+1]:null}
