@@ -72,7 +72,7 @@ const publicUser = (u) => ({ id: u.id, email: u.email, name: u.name, role: u.rol
 
 // ---------- permissions ----------
 const ID = '[A-Za-z0-9_-]{1,64}';
-const COL_RE = new RegExp(`^(exercises|clients|workouts|sessions|members|private|settings|members/${ID}/(workouts|sessions))$`);
+const COL_RE = new RegExp(`^(exercises|clients|workouts|sessions|members|private|settings|archives|members/${ID}/(workouts|sessions))$`);
 function scopeOf(u) { return u.role === 'coach' ? u.id : u.coach_id; }
 function canRead(u, col, id) {
   if (u.role === 'coach') return true;
@@ -247,7 +247,13 @@ async function api(req, env, url) {
     const sp = splitDocPath(url.searchParams.get('path'));
     if (!sp || !COL_RE.test(sp.col) || !validId(sp.id)) return err(400, 'Bad path');
     if (method === 'GET') {
-      if (!canRead(me, sp.col, sp.id)) return err(403, 'Not allowed');
+      let ok = canRead(me, sp.col, sp.id);
+      if (!ok && sp.col === 'archives' && me.role === 'client') {
+        // A client may read the training history archive of the profile they are linked to.
+        const m = await env.DB.prepare("SELECT data FROM docs WHERE scope=? AND col='members' AND id=?").bind(scope, me.id).first();
+        ok = !!m && JSON.parse(m.data).cid === sp.id;
+      }
+      if (!ok) return err(403, 'Not allowed');
       const d = await env.DB.prepare('SELECT data FROM docs WHERE scope=? AND col=? AND id=?').bind(scope, sp.col, sp.id).first();
       return json({ exists: !!d, data: d ? JSON.parse(d.data) : null });
     }
@@ -266,6 +272,31 @@ async function api(req, env, url) {
       await env.DB.prepare('DELETE FROM docs WHERE scope=? AND col=? AND id=?').bind(scope, sp.col, sp.id).run();
       return json({ ok: true });
     }
+  }
+
+  // One-time import of client records + TrainHeroic history. The file in public/_imp is
+  // AES-GCM encrypted; only this Worker holds the key (IMPORT_KEY secret).
+  if (path === '/import-clients' && method === 'POST') {
+    if (me.role !== 'coach' || !env.IMPORT_KEY) return err(403, 'Not allowed');
+    const res = await env.ASSETS.fetch(new Request(new URL('/_imp/th.bin', url).toString()));
+    if (!res.ok) return err(404, 'Nothing to import');
+    const buf = new Uint8Array(await res.arrayBuffer());
+    const key = await crypto.subtle.importKey('raw', Uint8Array.from(atob(env.IMPORT_KEY), (c) => c.charCodeAt(0)), 'AES-GCM', false, ['decrypt']);
+    const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(0, 12) }, key, buf.slice(12));
+    const text = await new Response(new Blob([plain]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+    const b = JSON.parse(text);
+    const now = Date.now(), ids = {}, stmts = [];
+    const put = (col, id, data) => stmts.push(env.DB.prepare('INSERT OR REPLACE INTO docs (scope,col,id,data,updated_at) VALUES (?,?,?,?,?)').bind(scope, col, id, JSON.stringify(data), now));
+    for (const [cid, c] of Object.entries(b.clients || {})) {
+      if (!validId(cid)) continue;
+      const have = await env.DB.prepare("SELECT 1 FROM docs WHERE scope=? AND col='clients' AND id=?").bind(scope, cid).first();
+      if (!have) put('clients', cid, { ...c, updatedAt: now });
+      if (b.archives && b.archives[cid]) { put('archives', cid, b.archives[cid]); ids[cid] = 'arch-' + cid; }
+    }
+    const pa = await env.DB.prepare("SELECT data FROM docs WHERE scope=? AND col='private' AND id='archives'").bind(scope).first();
+    put('private', 'archives', { ...(pa ? JSON.parse(pa.data) : {}), ...ids });
+    await env.DB.batch(stmts);
+    return json({ imported: Object.keys(ids) });
   }
 
   // Bulk upload used once when the coach moves this device's data into the account.
