@@ -5,7 +5,10 @@
 
 const COOKIE = 'cc_s';
 const SESSION_DAYS = 60;
-const PBKDF2_ITER = 100000;
+// The free Workers plan allows ~10 ms of CPU per request, so the iteration count is kept
+// modest and every password is first mixed with a secret pepper (PEPPER) that never
+// lives in the database. A leaked database alone is not enough to test guesses offline.
+const PBKDF2_ITER = 20000;
 const enc = new TextEncoder();
 
 const json = (data, status = 200, headers = {}) =>
@@ -18,9 +21,12 @@ const randBytes = (n) => crypto.getRandomValues(new Uint8Array(n));
 const newId = () => hex(randBytes(12));
 const sha256 = async (s) => hex(await crypto.subtle.digest('SHA-256', enc.encode(s)));
 
+let PEPPER_KEY = null;
 async function hashPassword(password, saltB64) {
   const salt = saltB64 ? Uint8Array.from(atob(saltB64), (c) => c.charCodeAt(0)) : randBytes(16);
-  const key = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveBits']);
+  const pw = enc.encode(String(password).slice(0, 256));
+  const peppered = PEPPER_KEY ? new Uint8Array(await crypto.subtle.sign('HMAC', PEPPER_KEY, pw)) : pw;
+  const key = await crypto.subtle.importKey('raw', peppered, 'PBKDF2', false, ['deriveBits']);
   const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations: PBKDF2_ITER }, key, 256);
   return { hash: b64(bits), salt: b64(salt) };
 }
@@ -290,6 +296,8 @@ export default {
   async fetch(req, env) {
     const url = new URL(req.url);
     if (url.pathname.startsWith('/api/')) {
+      if (!PEPPER_KEY && env.PEPPER) PEPPER_KEY = await crypto.subtle.importKey('raw', enc.encode(env.PEPPER), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+      if (!env.PEPPER) return err(503, 'The server is missing its PEPPER secret.');
       try { return await api(req, env, url); }
       catch (e) { console.error(e); return err(500, 'Something went wrong. Try again.'); }
     }
