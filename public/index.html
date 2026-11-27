@@ -233,6 +233,17 @@ button.demo-link{border:0;cursor:pointer;font:inherit;font-weight:700}
 .yth{display:flex;align-items:center;gap:12px;padding:8px 8px 8px 16px;color:#fff}.yth b{flex:1;min-width:0;font:italic 800 18px/1.1 var(--d);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.yth a{color:#9a9aa2;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:4px;text-decoration:none}.yth .icb{color:#fff;background:#232328}
 .ytfb{display:flex;justify-content:center;align-items:center;gap:6px;min-height:44px;color:#9a9aa2;font-size:13.5px;font-weight:600;text-decoration:none}.ytfb:hover{color:#fff}
 .ytf{position:relative;aspect-ratio:16/9;background:#000}.ytf iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.lv-body.ssg{grid-template-columns:minmax(0,1fr);max-width:760px}
+.ssg-h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px}.ssg-h .ss-tag{margin:0}.ssg-t{flex:1;min-width:0;font-size:13.5px;color:#9a9aa2;font-weight:600}
+.ssx{position:relative;padding-left:18px;border-left:3px solid var(--brand);margin-left:4px}.ssx+.ssx{margin-top:18px;padding-top:18px;border-top:1px dashed #2a2a30}
+#live.light .ssx+.ssx{border-top-color:#dcdcd6}
+.ssx-h{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.ssx-th{width:52px;height:52px;border-radius:14px;overflow:hidden;flex:none}.ssx-th .art{width:100%;height:100%}
+.ssx-n{min-width:0;flex:1}.ssx-n span{font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#7FD3AC}#live.light .ssx-n span{color:#0F6B44}
+.ssx-n h2{margin:2px 0 0!important;font-size:clamp(24px,4.2vw,34px)!important;line-height:.95;text-transform:uppercase}
+.ssx-l{order:3;background:var(--brand);color:#fff;font:italic 800 15px/1 var(--d);padding:7px 11px;border-radius:999px;flex:none}
+.lset .sn small{display:block;font-size:10px;font-weight:800;color:var(--brand);line-height:1;margin-bottom:2px}
+.pill.ssp{gap:6px;max-width:min(92vw,560px)}.pill.ssp .ssn{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.ssp-plus{opacity:.5;margin:0 2px}
 .sr{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 .howbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;margin-bottom:14px}
 .howbar>details{grid-column:1/-1;grid-row:1}
@@ -1357,38 +1368,42 @@ function startLive(w,a){
 function liveSwipe(el){if(el._sw)return;el._sw=1;let sx=0,sy=0,st=0,ok=false;
   el.addEventListener('touchstart',e=>{const t=e.touches[0];ok=e.touches.length===1&&!e.target.closest('input,textarea,select,.lv-pills,.chips,.sheet,.rest,[data-noswipe]');sx=t.clientX;sy=t.clientY;st=Date.now()},{passive:true});
   el.addEventListener('touchend',e=>{if(!ok||!LIVE||LIVE.fin)return;ok=false;const t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;if(Date.now()-st>700||Math.abs(dx)<70||Math.abs(dx)<Math.abs(dy)*1.6)return;
-    const i=LIVE.idx+(dx<0?1:-1);if(i<0||i>=LIVE.blocks.length)return;LIVE._slide=dx<0?'l':'r';A.lgo({i})},{passive:true})}
+    const [gs,ge]=lvGrp(LIVE.idx);const i=dx<0?ge+1:(gs>0?lvGrp(gs-1)[0]:-1);if(i<0||i>=LIVE.blocks.length)return;LIVE._slide=dx<0?'l':'r';A.lgo({i})},{passive:true})}
 function openLive(){applyLTH();liveSwipe($('#live'));$('#live').classList.add('on');document.body.classList.add('lock');paintLive();renderResume();startTick()}
 function hideLive(){kpClose();$('#live').classList.remove('on');if(!STACK.length)document.body.classList.remove('lock');renderResume()}
 function liveTotals(){let t=0,d=0;for(const b of LIVE.blocks)for(const s of b.sets){t++;if(s.done)d++}return {t,d}}
 function paintLive(){if(!LIVE)return;const el=$('#live');const sc=$('.lv-scroll',el);const st=sc?sc.scrollTop:0;el.innerHTML=LIVE.fin?rFinish():rLive();const ns=$('.lv-scroll',el);if(ns&&!LIVE._jump)ns.scrollTop=st;LIVE._jump=false;LIVE._pop=false;if(KP){if(LIVE.idx!==KP.idx||LIVE.fin)kpClose();else kpPaint()}if(LIVE._slide){const lb=$('.lv-body',el);lb&&lb.classList.add('sl-'+LIVE._slide);LIVE._slide=null}
   const p=$('.pill.on',el);if(p)p.scrollIntoView({block:'nearest',inline:'center'});tickUI()}
+function lvGrp(i){const B=LIVE.blocks;if(!B.length)return [0,0];i=Math.max(0,Math.min(i,B.length-1));let a=i;while(a>0&&B[a-1].superset)a--;let z=a;while(z<B.length-1&&B[z].superset)z++;return [a,z]}
+function lvGroups(){const g=[];let i=0;while(i<LIVE.blocks.length){const [a,z]=lvGrp(i);g.push([a,z]);i=z+1}return g}
 function rLive(){
   const L=LIVE;const b=L.blocks[L.idx];const ex=b?(exById(b.exId)||{name:'Deleted exercise',metric:'load'}):null;const m=ex?.metric||'load';const {t,d}=liveTotals();
   const head=`<header class="lv-h"><button class="icb" data-act="lhide" aria-label="Minimise workout" type="button">${ic('down')}</button><button class="icb" data-act="ltheme" aria-label="${LTH==='light'?'Switch to dark mode':'Switch to light mode'}" aria-pressed="${LTH==='light'}" type="button">${ic(LTH==='light'?'moon':'sun')}</button><div class="lv-t"><b>${esc(L.title)}</b><span><span id="lv-clock">0:00</span>${L.athlete!=='me'?' · '+esc(athName(L.athlete)):''} · ${d}/${t} sets</span></div><span style="width:42px;flex:none"></span><button class="btn red sm" data-act="lfin" type="button">Finish</button></header><div class="lv-prog"><i style="width:${t?d/t*100:0}%"></i></div>`;
-  const pills=`<nav class="lv-pills">${L.blocks.map((bk,i)=>{const e=exById(bk.exId);const dn=bk.sets.length&&bk.sets.every(s=>s.done);return `<button class="pill ${i===L.idx?'on':''} ${dn&&i!==L.idx?'dn':''}" data-act="lgo" data-i="${i}" type="button"><span class="dot" style="--c:${MC[e?.muscle]||'#777'}"></span>${esc(e?.name||'Exercise')}</button>`}).join('')}<button class="pill" data-act="ladd" type="button">${ic('plus',14)}Exercise</button></nav>`;
+  const pills=`<nav class="lv-pills">${lvGroups().map(([a,z])=>{const on=L.idx>=a&&L.idx<=z;const bs=L.blocks.slice(a,z+1);const dn=bs.every(bk=>bk.sets.length&&bk.sets.every(s=>s.done));return `<button class="pill ${on?'on':''} ${dn&&!on?'dn':''} ${z>a?'ssp':''}" data-act="lgo" data-i="${a}" type="button">${z>a?ic('link',13):''}${bs.map(bk=>{const e=exById(bk.exId);return `<span class="dot" style="--c:${MC[e?.muscle]||'#777'}"></span>${z>a?`<span class="ssn">${esc(e?.name||'Exercise')}</span>`:esc(e?.name||'Exercise')}`}).join('<span class="ssp-plus">+</span>')}</button>`}).join('')}<button class="pill" data-act="ladd" type="button">${ic('plus',14)}Exercise</button></nav>`;
   if(!b)return `<div class="lv">${head}${pills}<div class="lv-scroll"><div class="lempty"><img class="pl" src="${LTH==='light'?'cc-icon.png':'cc-icon-w.png'}" alt=""><h2>Blank session</h2><p style="color:#a2a2aa">Add exercises as you go. Your previous numbers fill in automatically.</p><button class="btn red lg" data-act="ladd" type="button">${ic('plus',18)}Add exercises</button>${L.notes?`<p class="lv-note">${esc(L.notes)}</p>`:''}</div></div>${restBar()}</div>`;
-  const prevSS=L.idx>0&&L.blocks[L.idx-1].superset;const partner=b.superset?L.blocks[L.idx+1]:prevSS?L.blocks[L.idx-1]:null;
-  const lp=lastPerf(L.athlete,b.exId);
-  const LF=liveFields(b,ex);const bu=b.u||'kg';
+  const [gs,ge]=lvGrp(L.idx);const grp=ge>gs;
+  const sec=(bi,lab)=>{const b=L.blocks[bi];const ex=exById(b.exId)||{name:'Deleted exercise',metric:'load'};const m=ex.metric||'load';const lp=lastPerf(L.athlete,b.exId);const LF=liveFields(b,ex);const bu=b.u||'kg';
   const row=(s,j)=>{const pl=s.plan||{target:s.target};const tgt=s.plan?setTarget(pl,b.mode||'reps',bu):(s.target||'—');let inp='';
-    const I=(f,lbl,ph,mode)=>`<input ${f==='w'?'class="w"':''} type="text" inputmode="none" readonly data-kp="${mode==='numeric'?'int':'dec'}" data-ls="${j},${f}" value="${esc(f==='w'?fmtW(s.w):f==='t'&&b.mode==='time'?(s.t===''?'':s.t):s[f]??'')}" placeholder="${esc(ph)}" aria-label="${esc(lbl)}">`;
+    const I=(f,lbl,ph,mode)=>`<input ${f==='w'?'class="w"':''} type="text" inputmode="none" readonly data-kp="${mode==='numeric'?'int':'dec'}" data-ls="${j},${f}" value="${esc(f==='w'?fmtW(s.w):f==='t'&&b.mode==='time'?(s.t===''?'':s.t):s[f]??'')}" placeholder="${esc(ph)}" aria-label="${esc((lab?lab+' ':'')+lbl)}">`;
     if(LF.d)inp=I('d','Kilometres','km')+'km'+I('t','Minutes','min')+'min';
     else{if(LF.t)inp+=I('t','Seconds','sec','numeric')+'sec';if(LF.w)inp+=I('w','Weight','—')+`<button class="ubtn" data-act="lunit" type="button" aria-label="Switch units">${bu}</button>`+(LF.r?'<span>×</span>':'');if(LF.r)inp+=I('r','Reps',b.mode==='amrap'?'max':'—','numeric')+(LF.w?'':'reps');if(LF.rpe)inp+='<span>@</span>'+I('rpe','RPE','RPE')}
-    return `<div class="lset ${s.done?'done':''}"><span class="sn">${j+1}</span><div class="tg">Target<b>${esc(tgt)}</b></div><div class="lin">${inp}</div><button class="chk" data-act="ltick" data-j="${j}" aria-label="${s.done?'Undo set':'Complete set'} ${j+1}" type="button">${ic('check',26)}</button></div>`};
-  return `<div class="lv">${head}${pills}<div class="lv-scroll"><section class="lv-body"><div class="lv-media">${demoBox(ex,{player:true,auto:true})}</div><div class="lv-main">
-   ${isArt(ex)?`<h2 class="sr">${esc(ex.name)}</h2>`:`${tag(ex.muscle)}<h2>${esc(ex.name)}</h2>`}
-   ${partner?`<p class="ss-tag">${ic('link',13)}Superset with ${esc(exById(partner.exId)?.name||'next')}</p>`:''}
-   ${L.idx===0&&L.notes?`<p class="lv-note">${ic('note',18)}<span>${esc(L.notes)}</span></p>`:''}
+    return `<div class="lset ${s.done?'done':''}"><span class="sn">${lab?`<small>${lab}</small>`:''}${j+1}</span><div class="tg">Target<b>${esc(tgt)}</b></div><div class="lin">${inp}</div><button class="chk" data-act="ltick" data-j="${j}" aria-label="${s.done?'Undo set':'Complete set'} ${j+1}${lab?' of '+esc(ex.name):''}" type="button">${ic('check',26)}</button></div>`};
+  return `${grp?`<div class="ssx-h"><span class="ssx-l">${lab}</span><div class="ssx-th">${art(ex,true)}</div><div class="ssx-n"><span>${esc([ex.muscle,ex.equip].filter(Boolean).join(' · '))}</span><h2>${esc(ex.name)}</h2></div></div>`:(isArt(ex)?`<h2 class="sr">${esc(ex.name)}</h2>`:`${tag(ex.muscle)}<h2>${esc(ex.name)}</h2>`)}
+   ${bi===0&&L.notes&&!grp?`<p class="lv-note">${ic('note',18)}<span>${esc(L.notes)}</span></p>`:''}
    ${b.note?`<p class="lv-note">${ic('note',18)}<span>${esc(b.note)}</span></p>`:''}
    ${lp?`<p class="lv-last">Last time · <b>${esc(lp.e.sets.map(z=>setStr(m,z)).join(', '))}</b> · ${esc(fmtDay(lp.s.day))}</p>`:''}
    ${(ex.cues||[]).length||(ex.steps||[]).length||ex.desc||safeUrl(ex.link)?`<div class="howbar">${(ex.cues||[]).length||(ex.steps||[]).length||ex.desc?`<details class="how"><summary>${ic('eye',18)}How to do it</summary><div class="how-b">${(ex.cues||[]).length?`<ol class="cues">${ex.cues.map(c=>`<li>${esc(c)}</li>`).join('')}</ol>`:''}${ex.desc?`<p>${esc(ex.desc)}</p>`:''}${(ex.steps||[]).length?`<details class="steps"><summary>Step by step</summary><ol>${ex.steps.map(c=>`<li>${esc(c)}</li>`).join('')}</ol></details>`:''}</div></details>`:''}${demoLink(ex)}</div>`:''}
    <div class="lsets">${b.sets.map(row).join('')}</div>
-   <div class="lv-row"><button class="chip" data-act="laddset" type="button">${ic('plus',14)}Add set</button>${b.sets.length>1?`<button class="chip" data-act="lrmset" type="button">Remove last set</button>`:''}<button class="chip ${b.cmtOpen||b.cmt?'on':''}" data-act="lcmt" type="button">${ic('note',14)}${b.cmt?'Edit comment':'Comment'}</button><button class="chip" data-act="lswap" type="button">${ic('copy',14)}Swap exercise</button><button class="chip" data-act="lrmex" type="button">${ic('trash',14)}Remove exercise</button></div>
-   ${b.cmtOpen||b.cmt?`<label class="field" style="margin-top:12px"><span class="lab" style="color:#9a9aa2">Comment on ${esc(ex.name)}</span><textarea id="lc-${L.idx}" data-lc="${L.idx}" rows="2" placeholder="How it felt, pain, equipment used, anything for ${L.athlete==='me'?'your log':'your coach'}">${esc(b.cmt||'')}</textarea></label>`:''}
-   ${(ex.subs||[]).some(n=>subId(n))?`<div class="field" style="margin-top:14px"><span class="lab" style="color:#9a9aa2">Equipment taken? Swap to</span><div class="chips">${subChips(ex,'lswap')}</div></div>`:''}
-  </div></section></div>
-  <footer class="lv-f"><button class="btn dk" data-act="lgo" data-i="${L.idx-1}" ${L.idx===0?'disabled':''} type="button">${ic('left',18)}Previous</button>${L.idx<L.blocks.length-1?`<button class="btn ${L.blocks[L.idx].sets.every(x=>x.done)?'red lv-ready'+(L._pop?' lv-pop':''):'lt'}" data-act="lgo" data-i="${L.idx+1}" type="button">Next exercise${ic('right',18)}</button>`:`<button class="btn red" data-act="lfin" type="button">${ic('check',18)}Finish workout</button>`}</footer>${restBar()}</div>`;
+   <div class="lv-row"><button class="chip" data-act="laddset" type="button">${ic('plus',14)}Add set</button>${b.sets.length>1?`<button class="chip" data-act="lrmset" type="button">Remove last set</button>`:''}<button class="chip ${b.cmtOpen||b.cmt?'on':''}" data-act="lcmt" type="button">${ic('note',14)}${b.cmt?'Edit comment':'Comment'}</button>${!grp&&bi<L.blocks.length-1?`<button class="chip" data-act="lss" type="button">${ic('link',14)}Superset with next</button>`:''}<button class="chip" data-act="lswap" type="button">${ic('copy',14)}Swap exercise</button><button class="chip" data-act="lrmex" type="button">${ic('trash',14)}Remove exercise</button></div>
+   ${b.cmtOpen||b.cmt?`<label class="field" style="margin-top:12px"><span class="lab" style="color:#9a9aa2">Comment on ${esc(ex.name)}</span><textarea id="lc-${bi}" data-lc="${bi}" rows="2" placeholder="How it felt, pain, equipment used, anything for ${L.athlete==='me'?'your log':'your coach'}">${esc(b.cmt||'')}</textarea></label>`:''}
+   ${!grp&&(ex.subs||[]).some(n=>subId(n))?`<div class="field" style="margin-top:14px"><span class="lab" style="color:#9a9aa2">Equipment taken? Swap to</span><div class="chips">${subChips(ex,'lswap')}</div></div>`:''}`};
+  const ex0=exById(L.blocks[gs].exId)||{name:'Deleted exercise',metric:'load'};
+  const letter=String.fromCharCode(65+lvGroups().findIndex(g=>g[0]===gs));
+  const body=grp?`<section class="lv-body ssg"><div class="lv-main"><div class="ssg-h"><span class="ss-tag">${ic('link',13)}Superset</span><span class="ssg-t">One set of each, back to back, then rest</span><button class="chip" data-act="lunss" type="button">Unlink</button></div>${gs===0&&L.notes?`<p class="lv-note">${ic('note',18)}<span>${esc(L.notes)}</span></p>`:''}${L.blocks.slice(gs,ge+1).map((x,k)=>`<div class="ssx" data-b="${gs+k}">${sec(gs+k,letter+(k+1))}</div>`).join('')}</div></section>`
+    :`<section class="lv-body"><div class="lv-media">${demoBox(ex0,{player:true,auto:true})}</div><div class="lv-main" data-b="${gs}">${sec(gs,'')}</div></section>`;
+  const gdone=L.blocks.slice(gs,ge+1).every(x=>x.sets.every(y=>y.done));const prv=gs>0?lvGrp(gs-1)[0]:-1;
+  return `<div class="lv">${head}${pills}<div class="lv-scroll">${body}</div>
+  <footer class="lv-f"><button class="btn dk" data-act="lgo" data-i="${prv}" ${prv<0?'disabled':''} type="button">${ic('left',18)}Previous</button>${ge<L.blocks.length-1?`<button class="btn ${gdone?'red lv-ready'+(L._pop?' lv-pop':''):'lt'}" data-act="lgo" data-i="${ge+1}" type="button">Next exercise${ic('right',18)}</button>`:`<button class="btn red" data-act="lfin" type="button">${ic('check',18)}Finish workout</button>`}</footer>${restBar()}</div>`;
 }
 function restBar(){const r=LIVE.rest;const nb=LIVE.blocks[LIVE.idx];const ne=nb&&exById(nb.exId);const ns=nb?nb.sets.findIndex(s=>!s.done):-1;
   return `<div class="rest ${r?'on':''}" id="lv-rest"><svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="27" fill="none" stroke="currentColor" stroke-opacity=".12" stroke-width="7"/><circle id="rest-arc" cx="32" cy="32" r="27" fill="none" stroke="#188e5c" stroke-width="7" stroke-linecap="round" stroke-dasharray="169.6" transform="rotate(-90 32 32)"/></svg><div class="rt"><b id="rest-t">0:00</b><span>${ne&&ns>=0?`Next: ${esc(ne.name)} · set ${ns+1}`:'Rest'}</span></div><button class="icb" data-act="lrest" data-d="-15" type="button" aria-label="Minus 15 seconds">−15</button><button class="icb" data-act="lrest" data-d="15" type="button" aria-label="Plus 15 seconds">+15</button><button class="icb" data-act="lrest" data-d="skip" type="button" aria-label="Skip rest">${ic('x',18)}</button></div>`}
@@ -1551,7 +1566,9 @@ const A={
  resume:()=>openLive(),
  lhide:()=>hideLive(),
  ltheme:()=>{LTH=LTH==='light'?'dark':'light';try{localStorage.setItem(LTHK,LTH)}catch(e){}applyLTH();paintLive()},
- lgo:d=>{const i=+d.i;if(i<0||i>=LIVE.blocks.length)return;if(i!==LIVE.idx)haptic();if(!LIVE._slide&&i!==LIVE.idx)LIVE._slide=i>LIVE.idx?'l':'r';LIVE.idx=i;LIVE._jump=true;saveLive();paintLive()},
+ lss:()=>{const [,z]=lvGrp(LIVE.idx);if(z>=LIVE.blocks.length-1)return;LIVE.blocks[z].superset=true;LIVE.idx=lvGrp(LIVE.idx)[0];haptic('ok');saveLive();paintLive()},
+ lunss:()=>{const [a,z]=lvGrp(LIVE.idx);for(let k=a;k<z;k++)LIVE.blocks[k].superset=false;LIVE.idx=a;saveLive();paintLive()},
+ lgo:d=>{const i=+d.i;if(i<0||i>=LIVE.blocks.length)return;const same=lvGrp(i)[0]===lvGrp(LIVE.idx)[0];if(!same)haptic();if(!LIVE._slide&&!same)LIVE._slide=i>LIVE.idx?'l':'r';LIVE.idx=i;LIVE._jump=true;saveLive();paintLive()},
  ladd:()=>openPicker(ids=>{const at=LIVE.blocks.length;ids.forEach(id=>LIVE.blocks.push(liveBlock(newBlock(id),LIVE.athlete)));LIVE.idx=at;LIVE._jump=true;saveLive();paintLive()},'Add to session'),
  ltick:d=>{haptic('ok');
    try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();AC.resume&&AC.resume()}catch(e){}
@@ -1602,9 +1619,9 @@ const KPF={w:'Weight',r:'Reps',t:'Seconds',d:'Distance',rpe:'RPE'};
 function kpEl(){let el=$('#kp');if(!el){el=document.createElement('div');el.id='kp';el.className='kp';el.setAttribute('role','dialog');el.setAttribute('aria-label','Number pad');document.body.appendChild(el);
   el.addEventListener('pointerdown',e=>e.preventDefault());
   el.addEventListener('click',e=>{const b=e.target.closest('[data-k]');if(b&&!b.disabled)kpKey(b.dataset.k)})}return el}
-function kpInput(){return KP&&$(`#live [data-ls="${KP.j},${KP.f}"]`)}
+function kpInput(){return KP&&($(`#live [data-b="${KP.idx}"] [data-ls="${KP.j},${KP.f}"]`)||$(`#live [data-ls="${KP.j},${KP.f}"]`))}
 function kpStep(){const b=LIVE?.blocks[LIVE.idx];return {w:(b?.u==='lb'?(+S.settings.stepLb||5):(+S.settings.stepKg||2.5)),r:1,t:5,d:.1,rpe:.5}[KP.f]||1}
-function kpOpen(inp){if(!LIVE)return;const [j,f]=inp.dataset.ls.split(',');KP={j:+j,f,idx:LIVE.idx,v:inp.value,fresh:true,dec:inp.dataset.kp==='dec'};kpPaint();$('#live').classList.add('kp-open');requestAnimationFrame(()=>{kpEl().classList.add('on');$('#live').style.setProperty('--kph',kpEl().offsetHeight+'px');kpReveal()})}
+function kpOpen(inp){if(!LIVE)return;const bw=inp.closest('[data-b]');if(bw)LIVE.idx=+bw.dataset.b;const [j,f]=inp.dataset.ls.split(',');KP={j:+j,f,idx:LIVE.idx,v:inp.value,fresh:true,dec:inp.dataset.kp==='dec'};kpPaint();$('#live').classList.add('kp-open');requestAnimationFrame(()=>{kpEl().classList.add('on');$('#live').style.setProperty('--kph',kpEl().offsetHeight+'px');kpReveal()})}
 function kpReveal(){const i=kpInput(),sc=$('#live .lv-scroll');if(!i||!sc)return;const r=i.closest('.lset')?.getBoundingClientRect()||i.getBoundingClientRect();const top=window.innerWidth>=900?window.innerHeight:window.innerHeight-kpEl().offsetHeight;const d=r.bottom-(top-20);if(d>0||r.top<130)sc.scrollBy({top:d>0?d:r.top-130,behavior:'smooth'})}
 function kpClose(){if(!KP)return;KP=null;$$('#live .kp-on').forEach(x=>x.classList.remove('kp-on'));const el=$('#kp');el&&el.classList.remove('on');$('#live')?.classList.remove('kp-open')}
 function kpPaint(){const el=kpEl();el.classList.toggle('light',LTH==='light');$$('#live .kp-on').forEach(x=>x.classList.remove('kp-on'));const inp=kpInput();if(!inp){kpClose();return}inp.classList.add('kp-on');
@@ -1623,6 +1640,7 @@ function kpKey(k){if(!KP)return;haptic();if(!KP)return;if(!KP)return;if(!LIVE||L
   else if(k==='.'){if(!KP.dec||v.includes('.'))return;v=(v||'0')+'.'}
   else{if(v.replace('.','').length>=6)return;v=v==='0'?k:v+k}
   KP.v=v;KP.fresh=false;kpCommit();kpPaint()}
+document.addEventListener('click',e=>{const fb=e.target.closest&&e.target.closest('#live [data-b]');if(fb&&LIVE&&!LIVE.fin)LIVE.idx=+fb.dataset.b;},true);
 document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('[data-hsw]'))return;const inp=e.target.closest&&e.target.closest('#live input[data-kp]');if(inp){e.preventDefault();kpOpen(inp);return}
   if(KP&&!e.target.closest('#kp'))kpClose()},true);
 document.addEventListener('keydown',e=>{if(!KP||e.metaKey||e.ctrlKey||e.altKey)return;const k=e.key;
