@@ -1820,14 +1820,15 @@ function authView(){const m=AUTHM;const one=COACHES&&COACHES.length===1?COACHES[
    <button class="btn red lg" data-auth="setup" type="button">Create coach account</button><p class="au-sw"><button class="lnk" data-authm="login" type="button">Back to log in</button></p>`
   :`<h1>Log in</h1><p class="sm">Welcome back.</p>${inp('au-email','Email','email','username')}${inp('au-pass','Password','password','current-password')}
    <button class="btn red lg" data-auth="login" type="button">Log in</button>
-   <p class="au-sw">New here? <button class="lnk" data-authm="signup" type="button">Create an account</button></p><p class="au-sw sm">Forgot your password? Ask your coach to reset it.</p>`;
+   <p class="au-sw">New here? <button class="lnk" data-authm="signup" type="button">Create an account</button></p><p class="au-sw sm">Forgot your password? Ask your coach to reset it.</p>${COACHES&&!COACHES.length?`<p class="au-sw"><button class="lnk" data-authm="setup" type="button">Coach? Set up your account</button></p>`:''}`;
   return `<div class="au"><div class="au-card"><img class="au-logo" src="cc-word.png" alt="Consistency Crew"><div class="au-err" id="au-err" role="alert"></div>${body}</div></div>`}
 function showAuth(){let el=$('#auth');if(!el){el=document.createElement('div');el.id='auth';document.body.append(el);
    el.addEventListener('click',async e=>{const sw=e.target.closest('[data-authm]');if(sw){AUTHM=sw.dataset.authm;location.hash=AUTHM==='login'?'':AUTHM==='setup'?'coach-setup':'signup';return paintAuth()}
      const b=e.target.closest('[data-auth]');if(b)authSubmit(b.dataset.auth,b)});
    el.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.tagName==='INPUT'){const b=$('[data-auth]',el);b&&b.click()}})}
   const h=location.hash.slice(1);AUTHM=h==='signup'?'signup':h==='coach-setup'?'setup':'login';paintAuth();
-  if(!COACHES)fetch('/api/coaches').then(r=>r.json()).then(j=>{COACHES=j.coaches||[];if(AUTHM==='signup')paintAuth()}).catch(()=>{COACHES=[]})}
+  if(!COACHES)fetch('/api/coaches').then(r=>r.json()).then(j=>{COACHES=j.coaches||[];paintAuth()}).catch(()=>{COACHES=[]})
+  if(!window._authHash){window._authHash=1;window.addEventListener('hashchange',()=>{if(WEB||!$('#auth'))return;const h=location.hash.slice(1);AUTHM=h==='signup'?'signup':h==='coach-setup'?'setup':'login';paintAuth()})}}
 function paintAuth(){const el=$('#auth');if(!el)return;const keep={};$$('input',el).forEach(i=>{if(i.type!=='hidden')keep[i.id]=i.value});el.innerHTML=authView();for(const [k,v] of Object.entries(keep)){const i=document.getElementById(k);if(i&&i.type!=='password')i.value=v}}
 async function authSubmit(kind,btn){const v=id=>{const n=document.getElementById(id);return n?n.value:''};const errEl=$('#au-err');errEl.textContent='';
   const body=kind==='login'?{email:v('au-email'),password:v('au-pass')}:kind==='signup'?{name:v('au-name'),email:v('au-email'),password:v('au-pass'),coachId:v('au-coach')}:{code:v('au-code'),name:v('au-name'),email:v('au-email'),password:v('au-pass')};
