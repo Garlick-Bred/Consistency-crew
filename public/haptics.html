@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Haptics test · Consistency Crew</title>
+<style>
+body{margin:0;background:#0d0d0f;color:#f2f2ef;font:17px/1.45 system-ui,-apple-system,sans-serif;padding:28px 20px 60px}
+h1{font:italic 800 30px/1 system-ui;text-transform:uppercase;margin:0 0 6px}p{color:#a2a2aa;margin:0 0 22px}
+.t{background:#17171b;border-radius:20px;padding:18px;margin-bottom:14px}.t b{display:block;margin-bottom:4px}.t span{display:block;color:#9a9aa2;font-size:14.5px;margin-bottom:14px}
+button{width:100%;min-height:56px;border:0;border-radius:999px;background:#188E5C;color:#fff;font-weight:700;font-size:17px}
+label.sw{display:flex;align-items:center;justify-content:space-between;font-weight:700}
+input[switch]{transform:scale(1.5);accent-color:#188E5C}
+#ua{font-size:12px;color:#6a6a70;word-break:break-all;margin-top:24px}
+</style></head><body>
+<h1>Haptics test</h1>
+<p>Tap each one and note which you can feel. Try in Chrome and in Safari.</p>
+<div class="t"><b>1 · Real switch</b><span>Flip this switch yourself.</span><label class="sw">Tap me <input type="checkbox" switch></label></div>
+<div class="t"><b>2 · App method</b><span>What the workout screen uses (hidden switch).</span><button id="b2" type="button">Tap for a buzz</button></div>
+<div class="t"><b>3 · Vibrate API</b><span>Android method. iPhones ignore it.</span><button id="b3" type="button">Tap for a buzz</button></div>
+<div id="ua"></div>
+<script>
+function hapTick(){const l=document.createElement('label');l.setAttribute('aria-hidden','true');l.style.display='none';const x=document.createElement('input');x.type='checkbox';x.setAttribute('switch','');l.appendChild(x);document.head.appendChild(l);l.click();l.remove()}
+document.getElementById('b2').onclick=()=>hapTick();
+document.getElementById('b3').onclick=()=>{try{navigator.vibrate&&navigator.vibrate(20)}catch(e){}};
+document.getElementById('ua').textContent=navigator.userAgent+' · switch supported: '+('switch' in HTMLInputElement.prototype);
+</script></body></html>
