@@ -831,6 +831,11 @@ function muscleMix(w){const c={};for(const b of w.blocks||[]){const m=exById(b.e
 
 /* ---------- storage ---------- */
 function loadLocal(){try{const d=JSON.parse(localStorage.getItem(LSK)||'null')||JSON.parse(localStorage.getItem('coachmitch.v1')||'null');if(d){for(const k of COLS)SRC[k]=(Array.isArray(d[k])?d[k]:[]).map(x=>({...x,_p:k}));if(d.settings)S.settings={...S.settings,...d.settings}}}catch(e){}recompute()}
+/* standalone site: add Mitch's program from seed.json once per seed version, without overwriting anything edited on this device */
+async function loadSeed(){try{const r=await fetch('seed.json',{cache:'no-cache'});if(!r.ok)return;const d=await r.json();const v=+d.v||0;let have=0;try{have=+localStorage.getItem('cc.seedv')||0}catch(e){}if(v<=have)return;
+  for(const k of COLS){if(!Array.isArray(d[k]))continue;const ids=new Set((SRC[k]||[]).map(x=>x.id));SRC[k]=(SRC[k]||[]).concat(d[k].filter(x=>x&&x.id&&!ids.has(x.id)).map(x=>({...x,_p:k})))}
+  if(d.settings)for(const [k,val] of Object.entries(d.settings))if(S.settings[k]===undefined||S.settings[k]===''||(k==='name'&&!S.settings.name))S.settings[k]=val;
+  recompute();saveLocal();try{localStorage.setItem('cc.seedv',String(v))}catch(e){}}catch(e){}}
 function saveLocal(){if(CLOUD)return;try{const o={settings:S.settings};for(const k of COLS)o[k]=(SRC[k]||[]).map(x=>{const y={...x};delete y._p;return y});localStorage.setItem(LSK,JSON.stringify(o))}catch(e){toast('Could not save on this device','err')}}
 const Q={};
 function setSync(st){const t={ok:'Synced',saving:'Saving…',err:'Not saved',local:'Saved on this device'}[st];$$('.sync').forEach(el=>{el.className='sync '+st;el.innerHTML='<i></i>'+t})}
@@ -1657,7 +1662,7 @@ function syncProfile(c){if(CLOUD&&ROLE==='coach'&&c.uid&&safeId(c.uid))queue('me
 async function init(){
   await loadPack();
   let useFn=null;try{useFn=window.claude&&typeof window.claude.use==='function'?window.claude.use.bind(window.claude):null}catch(e){}
-  if(!useFn){loadLocal();boot();return}
+  if(!useFn){loadLocal();await loadSeed();boot();return}
   const to=new Promise(r=>setTimeout(()=>r(null),10000));
   const [db,user,assets]=await Promise.all([Promise.race([useFn('db'),to]),Promise.race([useFn('user'),to]),Promise.race([useFn('assets'),to])]).catch(()=>[null,null,null]);
   USER=user;ASSETS=assets;
