@@ -435,6 +435,7 @@ details.how p{color:#b5b5bb;padding-bottom:14px}
 .lset.done{background:linear-gradient(115deg,color-mix(in srgb,var(--brand) 34%,#17171b) 0%,color-mix(in srgb,var(--brand) 16%,#17171b) 55%,color-mix(in srgb,var(--brand) 7%,#17171b) 100%)}
 .lset.done .chk{background:var(--brand);border-color:var(--brand);color:#fff;transform:scale(1.04)}
 .lset.done .sn{color:#fff}
+.hapt{background:var(--panel);border:2px dashed var(--brand);border-radius:22px;padding:16px 18px;margin-bottom:18px;display:grid;gap:4px}.hapt-h b{font:italic 800 20px/1 var(--d);text-transform:uppercase;display:block}.hapt-h span{font-size:13px;color:var(--mute)}.hapt-r{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 0;border-top:1px solid var(--line)}.hapt-r b{display:block;font-size:15px}.hapt-r small{display:block;color:var(--mute);font-size:13px}.hapt-r input[switch]{width:auto;min-height:0;transform:scale(1.6);margin-right:10px;accent-color:var(--brand);flex:none}
 .lv-tt{display:flex;align-items:center;gap:10px;margin-bottom:12px}.lv-tt .grow{min-width:0}.lv-meta{flex:1;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#7FD3AC}
 .lv-tools{display:flex;gap:6px;flex:none;margin-left:auto}.lv-ti{background:#1d1d22;color:#e8e8e5;width:44px;height:44px}.lv-ti:hover{background:#2a2a30}.lv-ti.pl{background:var(--brand);color:#fff}.lv-ti.pl:hover{background:var(--brand2)}
 .ssx-th{position:relative}.ssx-th .ssx-l{position:absolute;left:-6px;bottom:-6px;font-size:12px;padding:4px 7px;box-shadow:0 0 0 2px #0c0c0e}
@@ -1019,7 +1020,7 @@ function vToday(){
   }
   const rec=mine.slice(0,5);
   const recent=`<section class="sec"><div class="sec-h"><h2>${CM?'Your history':'Your recent sessions'}</h2>${rec.length?`<button class="lnk" data-act="go" data-v="progress" type="button">Progress</button>`:''}</div>${rec.length?`<div class="rows">${rec.map(sessRow).join('')}</div>`:`<div class="card"><p class="sm">Finished sessions show up here with time, volume and personal records.</p></div>`}</section>`;
-  return `<div class="ph"><div><p class="sm">${esc(DOW[now.getDay()])}, ${MON[now.getMonth()]} ${now.getDate()}</p><h1>${CM?'Your training':'Today'}</h1></div>${!CM&&ROLE==='coach'?`<button class="pbtn" data-act="settings" aria-label="Settings and profile" type="button">${avatar(46)}<span class="pbtn-t"><b>${esc(S.settings.name||'Mitch')}</b><span>Settings</span></span></button>`:''}</div>${hero}${stats}${plan}${coach}${recent}`;
+  return `<div class="ph"><div><p class="sm">${esc(DOW[now.getDay()])}, ${MON[now.getMonth()]} ${now.getDate()}</p><h1>${CM?'Your training':'Today'}</h1></div>${!CM&&ROLE==='coach'?`<button class="pbtn" data-act="settings" aria-label="Settings and profile" type="button">${avatar(46)}<span class="pbtn-t"><b>${esc(S.settings.name||'Mitch')}</b><span>Settings</span></span></button>`:''}</div>${CM?'':hapTestCard()}${hero}${stats}${plan}${coach}${recent}`;
 }
 const dbox=k=>{if(!k)return `<div class="datebox"><b>—</b><span>Any</span></div>`;const d=kdate(k);return `<div class="datebox"><span>${MON[d.getMonth()]}</span><b>${d.getDate()}</b></div>`};
 function sessRow(s){const pr=(s.prs||[]).length;return `<button class="row" data-act="sess" data-id="${esc(s.id)}" type="button">${dbox(s.day)}<div class="grow"><b>${esc(s.title)}</b><span class="sm">${s.durationSec?mins(s.durationSec)+' min · ':''}${setsOf(s)} sets${volOf(s)?` · ${kfmt(volOf(s))} ${unit()}`:''}${pr?` · ${pr} PR${pr>1?'s':''}`:''}</span></div>${ic('right')}</button>`}
@@ -1454,6 +1455,10 @@ function restBar(){const r=LIVE.rest;const nb=LIVE.blocks[LIVE.idx];const ne=nb&
 let TICK=null,AC=null;
 function startTick(){if(!TICK)TICK=setInterval(tickUI,250)}
 /* haptics: vibrate where supported; iOS Safari has no vibrate, so toggle a native switch which ticks the Taptic Engine (iOS 18+) */
+function hapTestCard(){const sup='switch' in HTMLInputElement.prototype;const ua=navigator.userAgent;const br=/CriOS/.test(ua)?'Chrome on iPhone':/FxiOS/.test(ua)?'Firefox on iPhone':/iPhone|iPad/.test(ua)?'Safari on iPhone':/Android/.test(ua)?'Android':'Desktop';
+ return `<section class="hapt"><div class="hapt-h"><b>Haptics test</b><span>Temporary · ${esc(br)} · switch ${sup?'supported':'not supported'} · app buzz ${S.settings.haptic===false?'OFF in Settings':'on'}</span></div>
+ <label class="hapt-r"><span><b>1 · Flip this switch</b><small>A real iPhone switch. If this doesn't buzz, nothing on a website can.</small></span><input type="checkbox" switch></label>
+ <div class="hapt-r"><span><b>2 · App buzz</b><small>What the workout screen does when you tap.</small></span><button class="btn red sm" data-act="haptest" type="button">Buzz</button></div></section>`}
 function hapTick(){const l=document.createElement('label');l.setAttribute('aria-hidden','true');l.dataset.hsw='1';l.style.display='none';const x=document.createElement('input');x.type='checkbox';x.setAttribute('switch','');x.tabIndex=-1;l.appendChild(x);const stop=e=>e.stopPropagation();['click','input','change'].forEach(t=>l.addEventListener(t,stop));document.head.appendChild(l);l.click();l.remove()}
 function haptic(kind='tap'){if(S.settings.haptic===false)return;try{if(typeof navigator.vibrate==='function'&&navigator.vibrate(kind==='win'?[14,50,20,50,34]:kind==='ok'?18:8))return;
   hapTick();if(kind==='win'){setTimeout(hapTick,90);setTimeout(hapTick,200)}else if(kind==='ok')setTimeout(hapTick,70)}catch(e){}}
@@ -1626,6 +1631,7 @@ const A={
    saveLive();paintLive();
  },
  lunit:()=>{const b=LIVE.blocks[LIVE.idx];const from=b.u||'kg',to=from==='kg'?'lb':'kg';b.sets.forEach(x=>{if(x.plan){x.plan.w=conv(x.plan.w,from,to);x.plan.w2=conv(x.plan.w2,from,to)}});b.u=to;saveLive();paintLive()},
+ haptest:()=>{hapTick();try{navigator.vibrate&&navigator.vibrate(20)}catch(e){}toast('Sent a buzz')},
  lmenu:async()=>{const i=LIVE.idx,b=LIVE.blocks[i];if(!b)return;const ex=exById(b.exId)||{name:'Exercise',metric:'load'};const [a,z]=lvGrp(i);const grp=z>a;const it=(v,icn,l,cls='')=>`<button class="asht-i ${cls}" data-r="${v}" type="button">${ic(icn,20)}<span>${l}</span></button>`;
   const hasTips=(ex.cues||[]).length||(ex.steps||[]).length||ex.desc||safeUrl(ex.link);const LF=liveFields(b,ex);
   const v=await lvPanel(ex.name,it('cmt','note','Add comment')+(safeUrl(ex.link)?it('demo','play','Watch demo'):'')+(hasTips?it('tips','eye','How to do it'):'')+it('swap','swap','Swap exercise')+it('hist','hist','History')+(LF.w?it('pct','pct','Percent calculator'):'')+it('unit','dumb','Switch to '+((b.u||'kg')==='kg'?'lb':'kg'))+(grp?it('unss','link','Unlink superset'):(i<LIVE.blocks.length-1?it('ss','link','Superset with next exercise'):''))+it('add','plus','Add exercise to end of session')+it('rm','trash','Remove exercise','del'));
