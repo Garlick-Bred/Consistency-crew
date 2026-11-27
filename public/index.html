@@ -1381,7 +1381,7 @@ function restBar(){const r=LIVE.rest;const nb=LIVE.blocks[LIVE.idx];const ne=nb&
 let TICK=null,AC=null;
 function startTick(){if(!TICK)TICK=setInterval(tickUI,250)}
 /* haptics: vibrate where supported; iOS Safari has no vibrate, so toggle a native switch which ticks the Taptic Engine (iOS 18+) */
-function hapTick(){const l=document.createElement('label');l.setAttribute('aria-hidden','true');l.style.cssText='position:fixed;left:0;bottom:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none';const x=document.createElement('input');x.type='checkbox';x.setAttribute('switch','');x.tabIndex=-1;l.appendChild(x);const stop=e=>e.stopPropagation();['click','input','change'].forEach(t=>l.addEventListener(t,stop));document.body.appendChild(l);l.click();l.remove()}
+function hapTick(){const l=document.createElement('label');l.setAttribute('aria-hidden','true');l.dataset.hsw='1';l.style.cssText='position:fixed;left:0;bottom:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none';const x=document.createElement('input');x.type='checkbox';x.setAttribute('switch','');x.tabIndex=-1;l.appendChild(x);const stop=e=>e.stopPropagation();['click','input','change'].forEach(t=>l.addEventListener(t,stop));document.body.appendChild(l);l.click();l.remove()}
 function haptic(kind='tap'){if(S.settings.haptic===false)return;try{if(typeof navigator.vibrate==='function'&&navigator.vibrate(kind==='win'?[14,50,20,50,34]:kind==='ok'?18:8))return;
   hapTick();if(kind==='win'){setTimeout(hapTick,90);setTimeout(hapTick,200)}else if(kind==='ok')setTimeout(hapTick,70)}catch(e){}}
 function beep(){if(S.settings.sound===false)return;try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();[0,.18,.36].forEach((t,i)=>{const o=AC.createOscillator(),g=AC.createGain();o.frequency.value=i===2?1320:880;o.connect(g);g.connect(AC.destination);const s=AC.currentTime+t;g.gain.setValueAtTime(.0001,s);g.gain.exponentialRampToValueAtTime(.25,s+.02);g.gain.exponentialRampToValueAtTime(.0001,s+.15);o.start(s);o.stop(s+.16)})}catch(e){}}
@@ -1599,7 +1599,7 @@ function kpPaint(){const el=kpEl();el.classList.toggle('light',LTH==='light');$$
   <button data-k="." ${KP.dec?'':'disabled'} aria-label="Decimal point" type="button">.</button><button data-k="0" type="button">0</button><button class="kp-n" data-k="next" type="button">${nxt?'Next':'Done'}${nxt?ic('right',18):ic('check',18)}</button></div>`}
 function kpNext(){const ins=$$('#live [data-ls]');const i=ins.indexOf(kpInput());return i>=0&&i<ins.length-1?ins[i+1]:null}
 function kpCommit(){const inp=kpInput();if(!inp)return;inp.value=KP.v;inp.dispatchEvent(new Event('input',{bubbles:true}))}
-function kpKey(k){if(!KP)return;haptic();if(!KP)return;if(!LIVE||LIVE.idx!==KP.idx){kpClose();return}
+function kpKey(k){if(!KP)return;haptic();if(!KP)return;if(!KP)return;if(!LIVE||LIVE.idx!==KP.idx){kpClose();return}
   if(k==='done'){kpClose();return}
   if(k==='next'){const n=kpNext();if(n){kpOpen(n)}else kpClose();return}
   let v=KP.fresh?'':KP.v;
