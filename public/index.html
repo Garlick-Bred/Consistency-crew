@@ -270,7 +270,7 @@ video.mx,img.mx{object-fit:cover;display:block;background:#000}
 
 .field{display:grid;gap:7px}
 .lab{font-size:13.5px;font-weight:700;color:var(--mute)}
-input[type=text],input[type=date],input[type=number],input[type=url],input:not([type]),textarea,select{width:100%;min-height:48px;border-radius:14px;border:1.5px solid var(--line);background:var(--bg);padding:10px 14px;font-size:16px;outline:0}
+input[type=text],input[type=email],input[type=password],input[type=date],input[type=number],input[type=url],input:not([type]),textarea,select{width:100%;min-height:48px;border-radius:14px;border:1.5px solid var(--line);background:var(--bg);padding:10px 14px;font-size:16px;outline:0}
 textarea{resize:vertical;line-height:1.45}
 input:focus,textarea:focus,select:focus{border-color:var(--ink)}
 .title-in{border:0!important;padding:0!important;font:800 clamp(34px,5vw,48px)/1.05 var(--d)!important;text-transform:uppercase;background:none!important;min-height:0!important}
@@ -435,6 +435,12 @@ details.how p{color:#b5b5bb;padding-bottom:14px}
 .lset.done{background:linear-gradient(115deg,color-mix(in srgb,var(--brand) 34%,#17171b) 0%,color-mix(in srgb,var(--brand) 16%,#17171b) 55%,color-mix(in srgb,var(--brand) 7%,#17171b) 100%)}
 .lset.done .chk{background:var(--brand);border-color:var(--brand);color:#fff;transform:scale(1.04)}
 .lset.done .sn{color:#fff}
+.au{position:fixed;inset:0;z-index:90;background:var(--bg);overflow-y:auto;display:grid;place-items:start center;padding:max(28px,env(safe-area-inset-top)) 18px 40px}
+.au-card{width:min(440px,100%);display:grid;gap:16px;padding-top:4vh}.au-card h1{font-size:40px;text-transform:uppercase;font-style:italic}.au-logo{height:44px;width:auto;justify-self:start;margin-bottom:10px}
+:root[data-theme=dark] .au-logo{content:url(cc-word-w.png)}@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .au-logo{content:url(cc-word-w.png)}}
+.au-err:empty{display:none}.au-err{background:color-mix(in srgb,var(--danger) 12%,transparent);color:var(--danger);font-weight:600;border-radius:14px;padding:12px 14px;font-size:14.5px}
+.au-sw{text-align:center;color:var(--mute);font-size:15px}.au-sw .lnk{font-size:15px}
+.au-coach{display:flex;align-items:center;gap:12px;background:var(--panel);border-radius:16px;padding:10px 14px;box-shadow:inset 0 0 0 2px var(--brand)}.au-coach span:nth-child(2){flex:1;display:grid}.au-coach small{color:var(--mute);font-size:13px}.au-coach svg{color:var(--brand)}
 .hapt{background:var(--panel);border:2px dashed var(--brand);border-radius:22px;padding:16px 18px;margin-bottom:18px;display:grid;gap:4px}.hapt-h b{font:italic 800 20px/1 var(--d);text-transform:uppercase;display:block}.hapt-h span{font-size:13px;color:var(--mute)}.hapt-r{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 0;border-top:1px solid var(--line)}.hapt-r b{display:block;font-size:15px}.hapt-r small{display:block;color:var(--mute);font-size:13px}.hapt-v{display:flex;flex-wrap:wrap;gap:8px;padding-bottom:12px}.hapt-v .btn{background:var(--panel2)}
 .hapt-ov{position:relative;display:inline-grid;flex:none}.hapt-ov>*{grid-area:1/1}.hapt-ov input[switch]{position:relative;width:100%!important;height:100%;min-height:0;margin:0!important;transform:none!important;opacity:0;cursor:pointer;z-index:1}.hapt-ov.f input[switch]{opacity:.02}
 .hapt-r input[switch]{width:auto;min-height:0;transform:scale(1.6);margin-right:10px;accent-color:var(--brand);flex:none}
@@ -772,6 +778,7 @@ const BICON=`<img class="pl brand-l" src="cc-icon.png" alt=""><img class="pl bra
 const COLS=['exercises','clients','workouts','sessions'];
 const S={exercises:[],exDb:[],sessDb:[],clients:[],workouts:[],sessions:[],settings:{units:'kg',goal:4,name:'Mitch'}};
 const UI={view:'today',wf:'all',wPast:false,libQ:'',libM:'All',libDemo:'all',libN:60,pgAth:'me',pgEx:null,ctab:'program',cal:{ath:'all',mode:'week',anchor:null}};
+let WEB=null,WEBPEND=0;
 let DB=null,ASSETS=null,USER=null,CLOUD=false,READY=false,ROLE='coach',CM=null,MYUID=null,PROFILE=null;
 let BUILD=null,LIVE=null,EDITEX=null,EDITC=null,PICK=null,MENU=null,FIRSTRING=true,CLIP=null;
 const LSK='coachmitch.v2',LIVEK='coachmitch.live',LTHK='cc.livetheme';
@@ -951,8 +958,8 @@ function renderNav(){
   const items=navItems();const v=curView();
   const sync=`<span class="sync ${CLOUD?'ok':'local'}"><i></i>${CLOUD?'Synced':'Saved on this device'}</span>`;
   $('#side').innerHTML=`<div class="logo">${WORDMARK}</div>${items.map(([k,l,i])=>`<button class="nav ${v===k?'on':''}" data-act="go" data-v="${k}" type="button">${ic(i)}${l}</button>`).join('')}
-   <div class="side-f">${!CM&&ROLE==='coach'?`<button class="btn red" data-act="newwk" type="button">${ic('plus',18)}New workout</button><button class="nav" data-act="settings" type="button">${ic('gear')}Settings</button>`:''}${sync}</div>`;
-  $('#topbar').innerHTML=`<div class="logo">${WORDMARK}</div><div style="display:flex;align-items:center;gap:4px">${sync}${!CM&&ROLE==='coach'?`<button class="icb" data-act="settings" aria-label="Settings" type="button">${ic('gear')}</button>`:''}</div>`;
+   <div class="side-f">${!CM&&ROLE==='coach'?`<button class="btn red" data-act="newwk" type="button">${ic('plus',18)}New workout</button><button class="nav" data-act="settings" type="button">${ic('gear')}Settings</button>`:''}${WEB&&ROLE==='client'?`<button class="nav" data-act="account" type="button">${ic('users')}My account</button>`:''}${sync}</div>`;
+  $('#topbar').innerHTML=`<div class="logo">${WORDMARK}</div><div style="display:flex;align-items:center;gap:4px">${sync}${!CM&&ROLE==='coach'?`<button class="icb" data-act="settings" aria-label="Settings" type="button">${ic('gear')}</button>`:''}${WEB&&ROLE==='client'?`<button class="icb" data-act="account" aria-label="My account" type="button">${ic('users')}</button>`:''}</div>`;
   const tb=$('#tabbar');tb.style.setProperty('--n',items.length);
   tb.innerHTML=items.map(([k,l,i])=>`<button class="tab ${v===k?'on':''}" data-act="go" data-v="${k}" type="button">${ic(i,22)}${l}</button>`).join('');
 }
@@ -1323,6 +1330,8 @@ function rClient(id){return ()=>{
   <button class="btn danger" style="justify-self:start" data-act="cdel" data-id="${esc(id)}" type="button">${ic('trash',16)}Remove client</button></div>`}}
 
 function inviteCard(c){const f=esc(c.name.split(' ')[0]);
+  if(WEB){if(c.uid)return `<div class="card invite ok"><div class="inv-h">${ic('check',18)}<b>${f} has an account</b></div><p class="sm">${c.email?esc(c.email)+' · ':''}${f} logs in with their own email and password and only sees their own program, history and progress, plus the exercise library.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost sm" data-act="cview" data-id="${esc(c.id)}" type="button">${ic('eye',15)}Preview ${f}’s view</button><button class="btn ghost sm" data-act="creset" data-id="${esc(c.id)}" type="button">Reset password</button></div></div>`;
+   return `<div class="card invite"><div class="inv-h">${ic('link',18)}<b>${f} doesn’t have an account</b></div><p class="sm">You added ${f} yourself, so only you see this profile. To give someone their own login, send them your sign-up link. When they sign up and pick you, they appear in your client list automatically.</p><div class="invlink"><code>${esc(location.origin+'/#signup')}</code><button class="btn red sm" data-act="signup-copy" type="button">${ic('copy',15)}Copy link</button></div><button class="lnk" data-act="cview" data-id="${esc(c.id)}" type="button">Preview ${f}’s view</button></div>`}
   if(c.uid)return `<div class="card invite ok"><div class="inv-h">${ic('check',18)}<b>${f} is connected</b></div><p class="sm">${f} sees only their own program, history, progress and your feedback, plus the exercise library. Your private notes and other clients stay hidden.</p><button class="btn ghost sm" data-act="cview" data-id="${esc(c.id)}" type="button">${ic('eye',15)}Preview ${f}’s view</button></div>`;
   const waiting=(SRC.members||[]).some(r=>r.join&&r.join===c.code);
   return `<div class="card invite"><div class="inv-h">${ic('link',18)}<b>Invite ${f} to the app</b></div>
@@ -1378,6 +1387,7 @@ function rSettings(){const st=S.settings;const tog=(k,lbl,sub,def=true)=>{const 
  </section>
  <section class="st-sec"><h3 class="st-h">Library & data</h3>
  ${PACK.length?`<div class="card" style="display:grid;gap:6px"><b>Your TrainHeroic library</b><p class="sm">${PACK.length} exercises imported with their demo links, cues, steps and substitutions. Edits and uploads you make are saved on top of the import.</p></div>`:''}
+ ${WEB?`<div class="card" style="display:grid;gap:10px"><b>Your account</b><p class="sm">Signed in as ${esc(WEB.user.email)}. Clients sign up at <b>${esc(location.origin)}/#signup</b> and pick you as their coach.</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn ghost sm" data-act="account" type="button">Change password</button><button class="btn ghost sm" data-act="signup-copy" type="button">${ic('copy',15)}Copy sign-up link</button><button class="btn danger sm" data-act="signout" type="button">${ic('out',15)}Sign out</button></div></div>`:''}
  <div class="card"><b>Where your data lives</b><p class="sm" style="margin-top:6px">${CLOUD?'Everything syncs across your devices. Clients you share the app with can only read their own program, history and your feedback, plus the exercise library. Your notes, your training and other clients are locked to you.':'This preview saves to this browser only. Open the published app to sync across devices and upload videos.'}</p></div>
  </section></div>
  <footer class="sf"><button class="btn red" data-act="stsave" type="button">Done</button></footer>`}
@@ -1641,6 +1651,11 @@ const A={
    saveLive();paintLive();
  },
  lunit:()=>{const b=LIVE.blocks[LIVE.idx];const from=b.u||'kg',to=from==='kg'?'lb':'kg';b.sets.forEach(x=>{if(x.plan){x.plan.w=conv(x.plan.w,from,to);x.plan.w2=conv(x.plan.w2,from,to)}});b.u=to;saveLive();paintLive()},
+ account:()=>openSheet('account',rAccount,{size:'narrow'}),
+ signout:async()=>{if(!await ask('Sign out?','You can log back in with your email and password.','Sign out'))return;try{await fetch('/api/logout',{method:'POST'})}catch(e){}try{localStorage.removeItem(LIVEK)}catch(e){}location.hash='';location.reload()},
+ 'signup-copy':async()=>{const l=location.origin+'/#signup';try{await navigator.clipboard.writeText(l);toast('Sign-up link copied')}catch(e){toast(l)}},
+ creset:async d=>{const c=clById(d.id);if(!c||!c.uid)return;if(!await ask('Reset '+c.name.split(' ')[0]+'’s password?','They’ll be signed out everywhere and get a temporary password from you. They can change it after logging in.','Reset'))return;try{const r=await fetch('/api/reset-client',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({uid:c.uid})});const j=await r.json();if(!r.ok)throw new Error(j.error);await ask('Temporary password','Password: '+j.temp+' (all lowercase). Send it to '+c.name.split(' ')[0]+'. They log in with '+(c.email||'their email')+' and this password, then change it under My account.','Copy password',false,'Close').then(ok=>{if(ok)navigator.clipboard.writeText(j.temp).then(()=>toast('Copied'),()=>{})})}catch(e){toast(e.message||'Couldn’t reset','err')}},
+ pwsave:async()=>{const cur=$('#pw-cur').value,nw=$('#pw-new').value;try{const r=await fetch('/api/password',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({current:cur,password:nw})});const j=await r.json();if(!r.ok)throw new Error(j.error);toast('Password changed');closeSheet(true)}catch(e){toast(e.message||'Couldn’t change it','err')}},
  haptest:d=>{if(d.m==='c'){const l=$('#hap5');l&&l.click()}else if(d.m&&d.m[0]==='v'){const l=hapVar(d.m[1]);l&&l.click()}else hapTick();toast('Sent '+(d.m&&d.m[0]==='v'?d.m[1].toUpperCase():'a buzz'))},
  lmenu:async()=>{const i=LIVE.idx,b=LIVE.blocks[i];if(!b)return;const ex=exById(b.exId)||{name:'Exercise',metric:'load'};const [a,z]=lvGrp(i);const grp=z>a;const it=(v,icn,l,cls='')=>`<button class="asht-i ${cls}" data-r="${v}" type="button">${ic(icn,20)}<span>${l}</span></button>`;
   const hasTips=(ex.cues||[]).length||(ex.steps||[]).length||ex.desc||safeUrl(ex.link);const LF=liveFields(b,ex);
@@ -1743,7 +1758,7 @@ function route(){
 }
 window.addEventListener('hashchange',()=>{MENU=null;while(STACK.length)closeSheet(true);route();window.scrollTo(0,0)});
 function boot(){if(READY)return;READY=true;try{const l=JSON.parse(localStorage.getItem(LIVEK)||'null');if(l&&l.blocks)LIVE=l}catch(e){}route();if(LIVE){renderResume();startTick()}}
-function subCol(path,onRows){if(SUBS[path])return;SUBS[path]=DB.collection(path).onSnapshot(snap=>{SRC[path]=snap.docs.map(d=>({...clone(d.data()||{}),id:d.id,_p:path}));GOT.add(path);onRows&&onRows();recompute();maybeBoot()},err=>{GOT.add(path);maybeBoot();if(err&&err.code!=='revoked')toast('Some data couldn’t load','err')})}
+function subCol(path,onRows){if(SUBS[path])return;SUBS[path]=DB.collection(path).onSnapshot(snap=>{SRC[path]=snap.docs.map(d=>({...clone(d.data()||{}),id:d.id,_p:path}));GOT.add(path);recompute();onRows&&onRows();maybeBoot()},err=>{GOT.add(path);maybeBoot();if(err&&err.code!=='revoked')toast('Some data couldn’t load','err')})}
 function subDoc(path,cb){if(SUBS[path])return;SUBS[path]=DB.doc(path).onSnapshot(d=>{cb(d.exists?clone(d.data()):null);GOT.add(path);maybeBoot()},()=>{cb(null);GOT.add(path);maybeBoot()})}
 const GOT=new Set();let NEED=[],BOOTT=null;
 function maybeBoot(){if(!READY&&NEED.every(k=>GOT.has(k))){clearTimeout(BOOTT);boot()}else if(READY)scheduleRender()}
@@ -1763,10 +1778,77 @@ async function linkClient(c,u){
   LINKING.delete(c.id);toast(`${c.name} is connected`);
 }
 function syncProfile(c){if(CLOUD&&ROLE==='coach'&&c.uid&&safeId(c.uid))queue('members/'+c.uid,()=>DB.doc('members/'+c.uid).set(profileFor(c)))}
+function rAccount(){const u=WEB&&WEB.user;if(!u)return '';return `<header class="sh"><h2>My account</h2><button class="icb" data-act="close" aria-label="Close" type="button">${ic('x')}</button></header>
+ <div class="sb"><div class="card" style="display:grid;gap:4px"><b>${esc(u.name)}</b><span class="sm">${esc(u.email)}</span>${WEB.coach?`<span class="sm">Coach: ${esc(WEB.coach.name)}${WEB.coach.brand?' · '+esc(WEB.coach.brand):''}</span>`:''}</div>
+ <div class="field"><span class="lab">Current password</span><input type="password" id="pw-cur" autocomplete="current-password"></div>
+ <div class="field"><span class="lab">New password</span><input type="password" id="pw-new" autocomplete="new-password" placeholder="At least 8 characters"></div>
+ <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn red" data-act="pwsave" type="button">Change password</button><button class="btn danger" data-act="signout" type="button">${ic('out',16)}Sign out</button></div></div>`}
+function webDB(){
+  const subs=new Set();
+  const req=async(method,url,body)=>{const o={method,credentials:'same-origin',headers:{}};if(body!==undefined){o.headers['content-type']='application/json';o.body=JSON.stringify(body)}
+    const r=await fetch(url,o);if(r.status===401){location.reload();throw Object.assign(new Error('signed out'),{code:'revoked'})}
+    if(!r.ok){let m='';try{m=(await r.json()).error||''}catch(e){}throw Object.assign(new Error(m),{code:r.status===403?'invalid_argument':r.status===413?'quota_exceeded':r.status===429?'resource_exhausted':'unavailable'})}return r.json()};
+  const W=fn=>async(...a)=>{WEBPEND++;try{return await fn(...a)}finally{WEBPEND--}};
+  const sub=run=>{const s={run:async()=>{if(WEBPEND)return;await run()}};subs.add(s);run();return()=>subs.delete(s)};
+  const poll=()=>subs.forEach(s=>s.run());
+  setInterval(()=>{if(document.visibilityState==='visible')poll()},20000);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')poll()});
+  const q=p=>encodeURIComponent(p);
+  const docRef=path=>({set:W(d=>req('PUT','/api/doc?path='+q(path),d)),delete:W(()=>req('DELETE','/api/doc?path='+q(path))),
+    onSnapshot:(cb,eb)=>sub(async()=>{try{const r=await req('GET','/api/doc?path='+q(path));if(WEBPEND)return;cb({exists:r.exists,data:()=>r.data})}catch(e){eb&&eb(e)}})});
+  return {doc:docRef,collection:path=>({doc:id=>docRef(path+'/'+id),onSnapshot:(cb,eb)=>sub(async()=>{try{const r=await req('GET','/api/col?path='+q(path));if(WEBPEND)return;cb({docs:r.docs.map(d=>({id:d.id,data:()=>d.data}))})}catch(e){eb&&eb(e)}})})};
+}
+async function webMigrate(){
+  let done=null;try{done=localStorage.getItem('cc.migrated')}catch(e){}
+  if(done===WEB.user.id)return;
+  loadLocal();await loadSeed();
+  const items=[];for(const col of COLS)for(const x of SRC[col]||[]){const d={...x};delete d._p;const id=d.id;delete d.id;if(id)items.push({col,id,data:d})}
+  items.push({col:'settings',id:'app',data:{...S.settings,updatedAt:Date.now()}});
+  try{const r=await fetch('/api/import',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({items})});const j=await r.json();if(!r.ok)throw new Error(j.error);try{localStorage.setItem('cc.migrated',WEB.user.id)}catch(e){}if(j.imported)toast(`Moved ${j.imported} items from this device into your account`)}
+  catch(e){toast('Couldn’t move this device’s data into your account yet','err')}
+  for(const k of Object.keys(SRC))delete SRC[k];
+}
+let AUTHM='login',COACHES=null;
+function authView(){const m=AUTHM;const one=COACHES&&COACHES.length===1?COACHES[0]:null;
+  const inp=(id,lbl,type,ac,ph='')=>`<label class="field"><span class="lab">${lbl}</span><input id="${id}" type="${type}" autocomplete="${ac}" placeholder="${ph}" ${type==='email'?'autocapitalize="off" spellcheck="false"':''}></label>`;
+  const body=m==='signup'?`<h1>Create your account</h1><p class="sm">Sign up, pick your coach and your program shows up here.</p>
+   ${inp('au-name','Your name','text','name')}${inp('au-email','Email','email','email')}${inp('au-pass','Password','password','new-password','At least 8 characters')}
+   <div class="field"><span class="lab">Your coach</span>${!COACHES?'<p class="sm">Loading coaches…</p>':!COACHES.length?'<p class="sm">No coaches have set up yet.</p>':one?`<div class="au-coach on"><span class="pav" style="width:40px;height:40px;--c:#188e5c">${esc(initials(one.name))}</span><span><b>${esc(one.name)}</b><small>${esc(one.brand||'Coach')}</small></span>${ic('check',20)}</div><input type="hidden" id="au-coach" value="${esc(one.id)}">`:`<select id="au-coach"><option value="">Choose your coach</option>${COACHES.map(c=>`<option value="${esc(c.id)}">${esc(c.name)}${c.brand?' · '+esc(c.brand):''}</option>`).join('')}</select>`}</div>
+   <button class="btn red lg" data-auth="signup" type="button">Create account</button><p class="au-sw">Already have an account? <button class="lnk" data-authm="login" type="button">Log in</button></p>`
+  :m==='setup'?`<h1>Coach setup</h1><p class="sm">One time only. Enter the setup code you were given, then create your coach login.</p>
+   ${inp('au-code','Setup code','text','off')}${inp('au-name','Your name','text','name')}${inp('au-email','Email','email','email')}${inp('au-pass','Password','password','new-password','At least 8 characters')}
+   <button class="btn red lg" data-auth="setup" type="button">Create coach account</button><p class="au-sw"><button class="lnk" data-authm="login" type="button">Back to log in</button></p>`
+  :`<h1>Log in</h1><p class="sm">Welcome back.</p>${inp('au-email','Email','email','username')}${inp('au-pass','Password','password','current-password')}
+   <button class="btn red lg" data-auth="login" type="button">Log in</button>
+   <p class="au-sw">New here? <button class="lnk" data-authm="signup" type="button">Create an account</button></p><p class="au-sw sm">Forgot your password? Ask your coach to reset it.</p>`;
+  return `<div class="au"><div class="au-card"><img class="au-logo" src="cc-word.png" alt="Consistency Crew"><div class="au-err" id="au-err" role="alert"></div>${body}</div></div>`}
+function showAuth(){let el=$('#auth');if(!el){el=document.createElement('div');el.id='auth';document.body.append(el);
+   el.addEventListener('click',async e=>{const sw=e.target.closest('[data-authm]');if(sw){AUTHM=sw.dataset.authm;location.hash=AUTHM==='login'?'':AUTHM==='setup'?'coach-setup':'signup';return paintAuth()}
+     const b=e.target.closest('[data-auth]');if(b)authSubmit(b.dataset.auth,b)});
+   el.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.tagName==='INPUT'){const b=$('[data-auth]',el);b&&b.click()}})}
+  const h=location.hash.slice(1);AUTHM=h==='signup'?'signup':h==='coach-setup'?'setup':'login';paintAuth();
+  if(!COACHES)fetch('/api/coaches').then(r=>r.json()).then(j=>{COACHES=j.coaches||[];if(AUTHM==='signup')paintAuth()}).catch(()=>{COACHES=[]})}
+function paintAuth(){const el=$('#auth');if(!el)return;const keep={};$$('input',el).forEach(i=>{if(i.type!=='hidden')keep[i.id]=i.value});el.innerHTML=authView();for(const [k,v] of Object.entries(keep)){const i=document.getElementById(k);if(i&&i.type!=='password')i.value=v}}
+async function authSubmit(kind,btn){const v=id=>{const n=document.getElementById(id);return n?n.value:''};const errEl=$('#au-err');errEl.textContent='';
+  const body=kind==='login'?{email:v('au-email'),password:v('au-pass')}:kind==='signup'?{name:v('au-name'),email:v('au-email'),password:v('au-pass'),coachId:v('au-coach')}:{code:v('au-code'),name:v('au-name'),email:v('au-email'),password:v('au-pass')};
+  btn.disabled=true;try{const r=await fetch('/api/'+(kind==='setup'?'coach-setup':kind),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error||'Something went wrong');location.hash='';location.reload()}
+  catch(e){errEl.textContent=e.message;btn.disabled=false}}
 async function init(){
   await loadPack();
   let useFn=null;try{useFn=window.claude&&typeof window.claude.use==='function'?window.claude.use.bind(window.claude):null}catch(e){}
-  if(!useFn){loadLocal();await loadSeed();boot();return}
+  if(!useFn){
+    let me;try{const r=await fetch('/api/me',{credentials:'same-origin'});me=r.ok&&/json/.test(r.headers.get('content-type')||'')?await r.json():undefined}catch(e){}
+    if(me===undefined){loadLocal();await loadSeed();boot();return}
+    if(!me.user){$('#app')&&($('#app').hidden=true);showAuth();return}
+    WEB=me;MYUID=me.user.id;ROLE=me.user.role==='coach'?'coach':'client';
+    if(ROLE==='coach'){S.settings.name=S.settings.name||me.user.name;await webMigrate()}
+    DB=webDB();CLOUD=true;
+    BOOTT=setTimeout(()=>{if(!READY){boot();toast('Still connecting — showing what’s loaded so far','err')}},10000);
+    subDoc('settings/app',d=>{if(d)S.settings={...S.settings,...d};scheduleRender()});
+    subCol('exercises');
+    if(ROLE==='coach'){NEED=['settings/app','exercises','clients','workouts','sessions'];subCol('clients',ensureMemberSubs);subCol('workouts');subCol('sessions')}
+    else{NEED=['settings/app','exercises','members/'+MYUID];subDoc('members/'+MYUID,d=>{PROFILE=d;if(d&&d.cid){subCol(`members/${MYUID}/workouts`);subCol(`members/${MYUID}/sessions`)}recompute();if(READY)route()})}
+    return}
   const to=new Promise(r=>setTimeout(()=>r(null),10000));
   const [db,user,assets]=await Promise.all([Promise.race([useFn('db'),to]),Promise.race([useFn('user'),to]),Promise.race([useFn('assets'),to])]).catch(()=>[null,null,null]);
   USER=user;ASSETS=assets;
