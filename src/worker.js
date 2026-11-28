@@ -194,6 +194,8 @@ async function api(req, env, url) {
     return json({ ok: true }, 200, { 'set-cookie': sessionCookie('', 0) });
   }
 
+  if (path === '/ingest' && method === 'POST') return ingest(req, env);
+
   const me = await currentUser(req, env);
   if (path === '/me' && method === 'GET') {
     if (!me) return json({ user: null });
@@ -212,6 +214,19 @@ async function api(req, env, url) {
     const n = await hashPassword(String(b.password));
     await env.DB.prepare('UPDATE users SET pass_hash=?,pass_salt=? WHERE id=?').bind(n.hash, n.salt, me.id).run();
     return json({ ok: true });
+  }
+
+  if (path === '/ingest-key' && method === 'GET') {
+    const k = await env.DB.prepare('SELECT created_at,last_used FROM ingest_keys WHERE user_id=?').bind(me.id).first();
+    return json({ key: k ? { createdAt: k.created_at, lastUsed: k.last_used } : null });
+  }
+  if (path === '/ingest-key' && method === 'POST') {
+    const token = 'cc_' + hex(randBytes(20));
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM ingest_keys WHERE user_id=?').bind(me.id),
+      env.DB.prepare('INSERT INTO ingest_keys (token_hash,user_id,created_at) VALUES (?,?,?)').bind(await sha256(token), me.id, Date.now()),
+    ]);
+    return json({ key: token });
   }
 
   if (path === '/reset-client' && method === 'POST') {
@@ -321,6 +336,114 @@ async function api(req, env, url) {
   }
 
   return err(404, 'Not found');
+}
+
+// ---------- watch uploads ----------
+// An iPhone Shortcut posts each finished Apple Watch run here with the user's upload key.
+// Fields are loose on purpose (Shortcuts formats numbers and dates in different ways).
+function numIn(v) {
+  if (v == null) return null;
+  if (typeof v === 'number') return isFinite(v) ? v : null;
+  const m = String(v).replace(/,/g, '.').match(/-?\d+(\.\d+)?/);
+  return m ? parseFloat(m[0]) : null;
+}
+function toKm(v, unit) {
+  const n = numIn(v);
+  if (n == null || n <= 0) return null;
+  const u = String(unit || v).toLowerCase();
+  if (/\bmi|mile/.test(u)) return n * 1.609344;
+  if (/\bm\b|metre|meter/.test(u) && !/km/.test(u) && n > 100) return n / 1000;
+  return n;
+}
+function toSec(v) {
+  if (v == null || v === '') return null;
+  if (typeof v === 'number') return v > 0 ? v : null;
+  const t = String(v).trim();
+  if (/^\d+(:\d{1,2}){1,2}$/.test(t)) return t.split(':').reduce((a, x) => a * 60 + +x, 0);
+  let sec = 0, hit = false;
+  for (const [re, mul] of [[/(\d+(?:\.\d+)?)\s*h/i, 3600], [/(\d+(?:\.\d+)?)\s*m(?!s)/i, 60], [/(\d+(?:\.\d+)?)\s*s/i, 1]]) {
+    const m = t.match(re); if (m) { sec += parseFloat(m[1]) * mul; hit = true; }
+  }
+  if (hit) return sec;
+  const n = numIn(t);
+  return n && n > 0 ? n : null;
+}
+function localDay(v) {
+  const m = String(v || '').match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  const d = new Date(v);
+  return isNaN(d) ? null : d.toISOString().slice(0, 10);
+}
+async function ingest(req, env) {
+  const key = req.headers.get('x-key') || new URL(req.url).searchParams.get('key') || '';
+  if (!/^cc_[a-f0-9]{40}$/.test(key)) return err(401, 'Missing or wrong upload key.');
+  const row = await env.DB.prepare('SELECT u.* FROM ingest_keys k JOIN users u ON u.id=k.user_id WHERE k.token_hash=?').bind(await sha256(key)).first();
+  if (!row) return err(401, 'That upload key is not valid any more. Make a new one in the app.');
+  const scope = row.role === 'coach' ? row.id : row.coach_id;
+  let b = {};
+  const text = await req.text();
+  try { b = JSON.parse(text); } catch { return err(400, 'Send the run as JSON.'); }
+  const start = b.start || b.startDate || b['Start Date'];
+  const day = localDay(start);
+  if (!day) return err(400, 'The run needs a start date.');
+  const startMs = Date.parse(start) || Date.parse(day + 'T12:00:00Z');
+  const endMs = Date.parse(b.end || b.endDate || b['End Date'] || '') || null;
+  let durationSec = toSec(b.duration ?? b.Duration) || (endMs && endMs > startMs ? Math.round((endMs - startMs) / 1000) : null);
+  if (durationSec && durationSec > 86400) durationSec = Math.round(durationSec / 1000); // milliseconds
+  const km = toKm(b.distance ?? b['Total Distance'], b.distanceUnit || b.unit);
+  const hr = numIn(b.avgHR ?? b.heartRate ?? b['Average Heart Rate']);
+  const kcal = numIn(b.energy ?? b.calories ?? b['Active Energy']);
+  if (!durationSec && !km) return err(400, 'The run needs a distance or a duration.');
+
+  // Where this user's sessions and workouts live, and who the athlete is.
+  let sessCol = 'sessions', wkCol = 'workouts', athlete = 'me';
+  if (row.role !== 'coach') {
+    const m = await env.DB.prepare("SELECT data FROM docs WHERE scope=? AND col='members' AND id=?").bind(scope, row.id).first();
+    const cid = m && JSON.parse(m.data).cid;
+    if (!cid) return err(409, 'Your coach has not finished setting up your profile yet.');
+    sessCol = `members/${row.id}/sessions`; wkCol = `members/${row.id}/workouts`; athlete = cid;
+  }
+  const sid = 'aw' + Math.floor(startMs / 1000);
+  const dup = await env.DB.prepare('SELECT 1 FROM docs WHERE scope=? AND col=? AND id=?').bind(scope, sessCol, sid).first();
+  if (dup) return new Response('Already saved this run.', { headers: { 'content-type': 'text/plain' } });
+
+  // Match a planned run on the same day that has not been logged yet.
+  const wk = await env.DB.prepare("SELECT id,data FROM docs WHERE scope=? AND col=? AND json_extract(data,'$.date')=?").bind(scope, wkCol, day).all();
+  const done = await env.DB.prepare("SELECT json_extract(data,'$.workoutId') w FROM docs WHERE scope=? AND col=? AND json_extract(data,'$.day')=?").bind(scope, sessCol, day).all();
+  const doneIds = new Set(done.results.map((x) => x.w));
+  let plan = null, planBlock = null;
+  for (const w of wk.results) {
+    if (doneIds.has(w.id)) continue;
+    const d = JSON.parse(w.data);
+    if (row.role === 'coach' && d.assignee && d.assignee !== 'me') continue;
+    const blk = (d.blocks || []).find((x) => x.mode === 'distance' || x.mode === 'time');
+    if (blk) { plan = { id: w.id, ...d }; planBlock = blk; break; }
+  }
+  const exId = planBlock ? planBlock.exId : 'x-run';
+  if (!planBlock) {
+    const have = await env.DB.prepare("SELECT 1 FROM docs WHERE scope=? AND col='exercises' AND id='x-run'").bind(scope).first();
+    if (!have) await env.DB.prepare("INSERT INTO docs (scope,col,id,data,updated_at) VALUES (?,?,?,?,?)").bind(scope, 'exercises', 'x-run',
+      JSON.stringify({ name: 'Run', muscle: 'Conditioning', equip: 'Cardio', metric: 'distance', desc: 'Runs uploaded from Apple Watch.', cues: [], steps: [], subs: [], tags: ['run'], updatedAt: Date.now() }), Date.now()).run();
+  }
+  const set = {};
+  if (km) set.d = Math.round(km * 100) / 100;
+  // With a distance, the app stores time in minutes (same as the TrainHeroic history).
+  if (durationSec) set.t = km ? Math.round(durationSec / 60 * 100) / 100 : Math.round(durationSec);
+  const bits = [];
+  if (hr) bits.push(`avg HR ${Math.round(hr)}`);
+  if (kcal) bits.push(`${Math.round(kcal)} kcal`);
+  const session = {
+    workoutId: plan ? plan.id : null, title: plan ? plan.title : 'Run', athlete,
+    date: new Date(startMs).toISOString(), day, durationSec: durationSec ? Math.round(durationSec) : null, effort: null,
+    notes: bits.length ? 'From Apple Watch · ' + bits.join(' · ') : 'From Apple Watch',
+    entries: [{ exId, mode: 'distance', sets: [set] }], prs: [], source: 'watch', updatedAt: Date.now(),
+  };
+  await env.DB.batch([
+    env.DB.prepare('INSERT INTO docs (scope,col,id,data,updated_at) VALUES (?,?,?,?,?)').bind(scope, sessCol, sid, JSON.stringify(session), Date.now()),
+    env.DB.prepare('UPDATE ingest_keys SET last_used=? WHERE token_hash=?').bind(Date.now(), await sha256(key)),
+  ]);
+  const what = [km ? `${set.d} km` : null, durationSec ? `${Math.round(durationSec / 60)} min` : null].filter(Boolean).join(', ');
+  return new Response(`Saved ${what} run${plan ? ' to "' + plan.title + '"' : ''}.`, { headers: { 'content-type': 'text/plain' } });
 }
 
 export default {
